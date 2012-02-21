@@ -200,6 +200,10 @@ vz.capabilities.load = function() {
 		controller: 'capabilities',
 		success: function(json) {
 			$.extend(true, vz.capabilities, json.capabilities);
+		
+			vz.capabilities.definitions.properties.each(function(index, propdef) {
+				vz.capabilities.definitions.properties[index] = new Property(propdef);
+			});
 		}
 	});
 };

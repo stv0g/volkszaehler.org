@@ -38,69 +38,94 @@ var Property = function(json) {
  * @todo implement/test
  */
 Property.prototype.validate = function(value) {
+	var invalid = false;
+
 	switch (this.type) {
 		case 'string':
 		case 'text':
-			// TODO check pattern
-			// TODO check string length
-			return true;
+			invalid |= (this.pattern != undefined) && value.match(this.pattern);
+			invalid |= (this.min != undefined) && value.length < this.min;
+			invalid |= (this.max != undefined) && value.length > this.max;
+			break;
+
+		case 'integer':
+			invalid |= !value.match(/^[+-]?\d*$/);
 			
 		case 'float':
-			// TODO check format
-			// TODO check min/max
-			return true;
-			
-		case 'integer':
-			// TODO check format
-			// TODO check min/max
-			return true;
+			invalid |= !value.match(/^[+-]?\d*(\.\d*)?$/);
+			invalid |= (this.min != undefined) && value < this.min;
+			invalid |= (this.max != undefined) && value > this.max;
+			break;
 			
 		case 'boolean':
-			return value == '1' || value == '';
+			invalid |= value != '1' && value != '';
+			break;
 			
 		case 'multiple':
-			return this.options.contains(value);
+			invalid |= !this.options.contains(value);
+			break;
 			
 		default:
 			throw new Exception('EntityException', 'Unknown property');
 	}
+	
+	return !invalid;
 };
 
 /**
- * 
- * @todo implement/test
+ * Get form element for property
  */
 Property.prototype.getInput = function(value) {
+	var elm;
+
 	switch (this.type) {
-		case 'string':
 		case 'float':
 		case 'integer':
-			return $('<input>')
-				.attr('type', 'text')
-				.attr('name=', this.name)
-				.attr('maxlength', (property.type == 'string') ? this.max : 0);
+		case 'string':
+			elm = $('<input>').attr('type', 'text');
 			
+			if (this.type == 'string' && this.max) {
+				elm.attr('maxlength', this.max);
+			}
+			break;
+					
 		case 'text':
-			return $('<textarea>')
-				.attr('name', this.name);
-			
+			elm = $('<textarea>');
+			break;
+		
 		case 'boolean':
-			return $('<input>')
-				.attr('type', 'checkbox')
-				.attr('name', this.name)
-				.attr('checked', true);
-			
+			elm = $('<input>').attr('type', 'checkbox');
+			break;
+				
 		case 'multiple':
-			var dom = $('<select>').attr('name', property.name)
-			property.options.each(function(index, option) {
-				dom.append($('<option>')
-					.value(option)
-					.text(option)
+			elm = $('<select>').attr('size', 1);
+			this.options.each(function(index, option) {
+				elm.append(
+					$('<option>')
+						.val(option)
+						.text(option)
 				);
 			});
-			return dom;
-	
+			break;
+		
 		default:
 			throw new Exception('PropertyException', 'Unknown property');
 	}
+	
+	elm
+		.attr('name', this.name)
+		.val(value)
+		.bind('keyup keydown change', this, function(event) { // live validation
+			var propdef = event.data;
+			var elm = $(this);
+
+			if (propdef.validate(elm.val()) == false && elm.val() != '') {
+				elm.addClass('invalid');
+			}
+			else {
+				elm.removeClass('invalid');
+			}
+		});
+
+	return elm;
 };

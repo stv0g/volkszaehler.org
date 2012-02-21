@@ -127,74 +127,71 @@ Entity.prototype.loadData = function() {
  */
 Entity.prototype.showDetails = function() {
 	var entity = this;
-	var dialog = $('<div>');
-	
-	dialog.addClass('details')
-	.append(this.getDOMDetails())
-	.dialog({
-		title: 'Details f&uuml;r ' + this.title,
-		width: 480,
-		resizable: false,
-		buttons : {
-			'Schließen': function() {
-				$(this).dialog('close');
-			},
-			'Löschen' : function() {
-				$('#entity-delete').dialog({ // confirm prompt
-					resizable: false,
-					modal: true,
-					title: 'Löschen',
-					width: 400,
-					buttons: {
-						'Löschen': function() {
-							entity.delete().done(function() {
-								entity.cookie = false;
-								vz.entities.saveCookie();
+	var dialog = $('<div>')
+		.addClass('details')
+		.append(this.getDOMDetails())
+		.dialog({
+			title: 'Details f&uuml;r ' + this.title,
+			width: 480,
+			resizable: false,
+			buttons : {
+				'Bearbeiten' : function() {
+					$('table', this).remove();
+					$(this).append(entity.getDOMDetails(true));
+				},
+				'Löschen' : function() {
+					$('#entity-delete').dialog({ // confirm prompt
+						resizable: false,
+						modal: true,
+						title: 'Löschen',
+						width: 400,
+						buttons: {
+							'Löschen': function() {
+								entity.delete().done(function() {
+									entity.cookie = false;
+									vz.entities.saveCookie();
 							
-								vz.entities.each(function(it, parent) { // remove from tree
-									if (entity.uuid == it.uuid) {
-										var array = (parent) ? parent.children : vz.entities;
-										array.remove(it);
-									}
-								}, true);
+									vz.entities.each(function(it, parent) { // remove from tree
+										if (entity.uuid == it.uuid) {
+											var array = (parent) ? parent.children : vz.entities;
+											array.remove(it);
+										}
+									}, true);
 		
-								vz.entities.showTable();
-								vz.wui.drawPlot();
-								dialog.dialog('close');
-							});
+									vz.entities.showTable();
+									vz.wui.drawPlot();
+									dialog.dialog('close');
+								});
 							
-							$(this).dialog('close');
-						},
-						'Abbrechen': function() {
-							$(this).dialog('close');
+								$(this).dialog('close');
+							},
+							'Abbrechen': function() {
+								$(this).dialog('close');
+							}
 						}
-					}
-				});
+					});
+				}
 			}
-		}
-	});
+		});
 };
 
 /**
  * Show from for new Channel
  * used to create info dialog
  */
-Entity.prototype.getDOMDetails = function(edit) {
+Entity.prototype.getDOMDetails = function(editable) {
 	var table = $('<table><thead><tr><th>Eigenschaft</th><th>Wert</th></tr></thead></table>');
 	var data = $('<tbody>');
 	
-	// general properties
-	var general = ['title', 'type', 'uuid', 'middleware', 'color', 'style', 'active', 'cookie'];
-	var sections = ['required', 'optional'];
-	
+	// frontend properties
+	var general = ['type', 'uuid', 'middleware', 'cookie'];
 	general.each(function(index, property) {
-		var definition = vz.capabilities.definitions.get('properties', property);
-		var title = (definition) ? definition.translation[vz.options.language] : property;
 		var value = this[property];
+		var title;
 		
 		switch(property) {
 			case 'type':
-				var title = 'Typ';
+				title = 'Typ';
 				var icon = $('<img>').
 					attr('src', 'images/types/' + this.definition.icon)
 					.css('margin-right', 4);
@@ -202,38 +199,20 @@ Entity.prototype.getDOMDetails = function(edit) {
 					.text(this.definition.translation[vz.options.language])
 					.prepend(icon);
 				break;
-			
+		
 			case 'middleware':
-				var title = 'Middleware';
-				var value = '<a href="' + this.middleware + '/capabilities.json">' + this.middleware + '</a>';
+				title = 'Middleware';
+				value = '<a href="' + this.middleware + '/capabilities.json">' + this.middleware + '</a>';
 				break;
-			
+		
 			case 'uuid':
-				var title = 'UUID';
-				var value = '<a href="' + this.middleware + '/entity/' + this.uuid + '.json">' + this.uuid + '</a>';
+				title = 'UUID';
+				value = '<a href="' + this.middleware + '/entity/' + this.uuid + '.json">' + this.uuid + '</a>';
 				break;
-	
-			case 'color':
-				var value = $('<span>')
-					.text(this.color)
-					.css('background-color', this.color)
-					.css('padding-left', 5)
-					.css('padding-right', 5);
-				break;
-				
+
 			case 'cookie':
-				var title = 'Cookie';
+				title = 'Cookie';
 				value = '<img src="images/' + ((this.cookie) ? 'tick' : 'cross') + '.png" alt="' + ((value) ? 'ja' : 'nein') + '" />';
-				break;
-			case 'active':
-				var value = '<img src="images/' + ((this.active) ? 'tick' : 'cross') + '.png" alt="' + ((this.active) ? 'ja' : 'nein') + '" />';
-				break;
-			case 'style':
-				switch (this.style) {
-					case 'lines': var value = 'Linien'; break;
-					case 'steps': var value = 'Stufen'; break;
-					case 'points': var value = 'Punkte'; break;
-				}
 				break;
 		}
 		
@@ -251,21 +230,46 @@ Entity.prototype.getDOMDetails = function(edit) {
 		);
 	}, this);
 	
+	// middleware properties
+	var sections = ['required', 'optional'];
 	sections.each(function(index, section) {
 		this.definition[section].each(function(index, property) {
-			if (this.hasOwnProperty(property) && !general.contains(property)) {
-				var definition = vz.capabilities.definitions.get('properties', property);
-				var title = definition.translation[vz.options.language];
+			if (editable || this.hasOwnProperty(property)) {
+				var propDef = vz.capabilities.definitions.get('properties', property);
+				
+				var title = (propDef) ? propDef.translation[vz.options.language] : property;
 				var value = this[property];
 		
-				if (definition.type == 'boolean') {
+				if (propDef && propDef.type == 'boolean') {
 					value = '<img src="images/' + ((value) ? 'tick' : 'cross') + '.png" alt="' + ((value) ? 'ja' : 'nein') + '" />';
 				}
 					
-				if (property == 'cost') {
-					value = (value * 1000 * 100) + ' ct/k' + this.definition.unit + 'h'; // ct per kWh
+				switch (property) {
+					case 'cost':
+						value = (value * 1000 * 100) + ' ct/k' + this.definition.unit + 'h'; // ct per kWh
+						break;
+				
+					case 'color':
+						value = $('<span>')
+							.text(this.color)
+							.css('background-color', this.color)
+							.css('padding-left', 5)
+							.css('padding-right', 5);
+						break;
+				
+					case 'style':
+						switch (this.style) {
+							case 'lines': value = 'Linien'; break;
+							case 'steps': value = 'Stufen'; break;
+							case 'points': value = 'Punkte'; break;
+						}
+						break;
 				}
-
+				
+				if (editable && propDef) {
+					value = propDef.getInput(this[property]);
+				}
+				
 				data.append($('<tr>')
 					.addClass('property')
 					.addClass(section)
@@ -281,6 +285,7 @@ Entity.prototype.getDOMDetails = function(edit) {
 			}
 		}, this);
 	}, this);
+
 	return table.append(data);
 };
 

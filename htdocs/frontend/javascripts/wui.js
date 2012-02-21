@@ -197,49 +197,22 @@ vz.wui.dialogs.init = function() {
 
 	// show available properties for selected type
 	function addProperties(proplist, className) {
-		proplist.each(function(index, def) {
-			vz.capabilities.definitions.properties.each(function(propindex, propdef) {
-				if (def == propdef.name) {
-					var cntrl = null;
-					var row = $('<tr>')
-						.addClass("property")
-						.append(
-							$('<td>').text(propdef.translation[vz.options.language])
-						);
-					
-					switch (propdef.type) {
-						case 'float':
-						case 'integer':
-						case 'string':
-							cntrl = $('<input>').attr("type", "text");
-							break;
-							
-						case 'text':
-							cntrl = $('<textarea>');
-							break;
-					
-						case 'boolean':
-							cntrl = $('<input>').attr("type", "checkbox");
-							break;
+		proplist.each(function(index, name) {
+			var propdef = vz.capabilities.definitions.get('properties', name);
+			
+			if (propdef) {
+				var row = $('<tr>')
+					.addClass("property")
+					.addClass(className)
+					.append(
+						$('<td>').text(propdef.translation[vz.options.language])
+					)
+					.append(
+						$('<td>').append(propdef.getInput())
+					);
 						
-						case 'multiple':
-							cntrl = $('<select>').attr("Size", "1");
-							propdef.options.each(function(optindex, optdef) {
-								cntrl.append(
-									$('<option>').html(optdef)
-								);
-							});
-							break;
-					}
-					
-					if (cntrl != null) {
-						row.addClass(className);
-						cntrl.attr("name", propdef.name);
-						row.append($('<td>').append(cntrl));
-						$('#entity-create form table').append(row);
-					}
-				}
-			});
+					$('#entity-create form table').append(row);
+			}
 		});
 	}
 	
@@ -256,10 +229,10 @@ vz.wui.dialogs.init = function() {
 	$('#entity-create form').submit(function() {
 		var def = $('select[name=type] option:selected', this).data('definition');
 		var properties = [];
-		
-		$(this).serializeArray().each(function(index, value) {
-			if (value.value != '') {
-				properties.push(value);
+				
+		$(this).serializeArray().each(function(index, prop) {
+			if (prop.value != '') { // strip empty properties
+				properties.push(prop);
 			}
 		});
 

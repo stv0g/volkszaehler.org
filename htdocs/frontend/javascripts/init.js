@@ -39,7 +39,7 @@ var vz = {
 		timeout: null
 	},
 	capabilities: {		// debugging and runtime information from middleware
-		definitions: {}	// definitions of entities & properties
+		definitions: { }
 	},
 	plot: { },		// flot instance
 	options: { }		// options loaded from cookies in options.js

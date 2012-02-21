@@ -11,15 +11,28 @@ table {
 	width: 100%;
 }
 
+.property input,
+.property textarea {
+	border: 1px solid grey;
+	-moz-border-radius: 5px;
+	-webkit-border-radius: 5px;
+	border-radius: 5px;
+	width: 100%;
+}
+
+.invalid {
+	background-color: #A20000;
+	color: white;
+}
+
 tr th {
 	border-bottom: 2px solid grey;
-	
 	text-align: left;
 	font-size: 0.9em;
 }
 
 tr.optional {
-  color: silver;
+  color: #7A7A7A;
 }
 
 tr.property td {
